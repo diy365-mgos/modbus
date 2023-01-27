@@ -17,7 +17,7 @@ config_schema:
   - ["modbus.stop_bits", "i", 1, {title: "1: 1 Bit, 2: 2 Bit, 3: 1.5 Bit, default: 1"}]
 
 conds:
-  - when: mos.platform == "esp32"
+  - when: mos.platform != "esp8266"
     apply:
       config_schema:
         - ["modbus.uart_no", "i", 1, {title: "UART to use for Modbus communication"}]
