@@ -497,27 +497,31 @@ bool mgos_modbus_create(const struct mgos_config_modbus* cfg) {
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
         ucfg.dev.rx_gpio = mgos_sys_config_get_modbus_uart_rx_pin();
     }
-    if (mgos_sys_config_get_modbus_uart_tx_pin() >= 0) {
-        ucfg.dev.tx_gpio = mgos_sys_config_get_modbus_uart_tx_pin();
-    }
-    if (mgos_sys_config_get_modbus_tx_en_gpio() >= 0) {
-        ucfg.dev.tx_en_gpio = mgos_sys_config_get_modbus_tx_en_gpio();
-    }
+    // if (mgos_sys_config_get_modbus_uart_tx_pin() >= 0) {
+    //     ucfg.dev.tx_gpio = mgos_sys_config_get_modbus_uart_tx_pin();
+    // }
+    //if (mgos_sys_config_get_modbus_tx_en_gpio() >= 0) {
+    //    ucfg.dev.tx_en_gpio = mgos_sys_config_get_modbus_tx_en_gpio();
+    //}
     if (mgos_sys_config_get_modbus_parity() >= 0 && mgos_sys_config_get_modbus_parity() < 3) {
         ucfg.parity = mgos_sys_config_get_modbus_parity();
     }
     if (mgos_sys_config_get_modbus_stop_bits() > 0 && mgos_sys_config_get_modbus_stop_bits() < 4) {
         ucfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
     }
-    ucfg.dev.hd = mgos_sys_config_get_modbus_tx_en_enable();
+    //ucfg.dev.hd = mgos_sys_config_get_modbus_tx_en_enable();
     ucfg.dev.tx_en_gpio_val = mgos_sys_config_get_modbus_tx_en_gpio_val();
 
     char b1[8], b2[8], b3[8];
-    LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
-                   cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1),
-                   mgos_gpio_str(ucfg.dev.tx_gpio, b2),
-                   mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
-                   ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
+    // LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
+    //                cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1),
+    //                mgos_gpio_str(ucfg.dev.tx_gpio, b2),
+    //                mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
+    //                ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
+
+    LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s), Baudrate %d, Parity %d, Stop bits %d, tx_en Value %d",
+                   cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1), ucfg.baud_rate,
+                   ucfg.parity, ucfg.stop_bits, ucfg.dev.tx_en_gpio_val));
 
     if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
         LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
@@ -719,11 +723,14 @@ bool mgos_modbus_connect() {
         LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
         return false;
     }
-    LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
-                   cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1),
-                   mgos_gpio_str(ucfg.dev.tx_gpio, b2),
-                   mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
-                   ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
+    // LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
+    //                cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1),
+    //                mgos_gpio_str(ucfg.dev.tx_gpio, b2),
+    //                mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
+    //                ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
+    LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s), Baudrate %d, Parity %d, Stop bits %d, tx_en Value %d",
+                   cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1), ucfg.baud_rate,
+                   ucfg.parity, ucfg.stop_bits, ucfg.dev.tx_en_gpio_val));
     return true;
 }
 
