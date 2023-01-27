@@ -26,12 +26,6 @@ conds:
         - ["modbus.tx_en_enable", "b", true, {title: "Enable half duplex mode"}]
         - ["modbus.tx_en_gpio", "i", 33, {title: "Pin to control half duplex mode"}]
         - ["modbus.tx_en_gpio_val", "b", true, {title: "TX enable value"}]
- - when: mos.platform == "esp8266"
-    apply:
-      config_schema:
-        - ["modbus.uart_no", "i", 0, {title: "UART to use for Modbus communication"}]
-        - ["debug.stdout_uart", 1]
-        - ["debug.stderr_uart", 1]
 
 libs:
   #- location: https://github.com/mongoose-os-libs/rpc-common
