@@ -30,8 +30,7 @@ conds:
     apply:
       config_schema:
         - ["modbus.uart_no", "i", 0, {title: "UART to use for Modbus communication"}]
-        - ["debug.stdout_uart", 1]
-        - ["debug.stderr_uart", 1]
+        - ["modbus.debug_uart_no", "i", 1, {title: "UART to use for stderr and stdout debug comunication"}]
 
 libs:
   
