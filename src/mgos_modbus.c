@@ -837,17 +837,18 @@ bool mgos_modbus_init(void) {
     if (!mgos_sys_config_get_modbus_enable())
         return true;
 
+    if (!mgos_modbus_create(&mgos_sys_config.modbus)) {
+        return false;
+    }
+
     #if CS_PLATFORM == CS_P_ESP8266
-    int debug_uart_no = demgos_sys_config_get_modbus_debug_uart_no()
+    int debug_uart_no = mgos_sys_config_get_modbus_debug_uart_no()
     if (mgos_set_stdout_uart(debug_uart_no) != MGOS_INIT_OK ||
         mgos_set_stderr_uart(debug_uart_no) != MGOS_INIT_OK) {
         return false;
     }
     #endif
 
-    if (!mgos_modbus_create(&mgos_sys_config.modbus)) {
-        return false;
-    }
     mg_rpc_add_handler(mgos_rpc_get_global(), "Modbus.Read",
                        "{func: %d, id:%d, start:%d, qty:%d, filename:%Q, json_map:%Q}",
                        rpc_modbus_read_handler, NULL);
