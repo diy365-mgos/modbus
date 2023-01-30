@@ -843,8 +843,7 @@ bool mgos_modbus_init(void) {
 
     #if CS_PLATFORM == CS_P_ESP8266
     int debug_uart_no = mgos_sys_config_get_modbus_debug_uart_no();
-    if (mgos_set_stdout_uart(debug_uart_no) != MGOS_INIT_OK ||
-        mgos_set_stderr_uart(debug_uart_no) != MGOS_INIT_OK) {
+    if (!mgos_set_stdout_uart(debug_uart_no) || !mgos_set_stderr_uart(debug_uart_no)) {
         return false;
     }
     #endif
