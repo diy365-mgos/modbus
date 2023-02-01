@@ -30,9 +30,11 @@ conds:
     apply:
       config_schema:
         - ["modbus.uart_no", "i", 0, {title: "UART to use for Modbus communication"}]
-        - ["modbus.debug_uart_no", "i", 1, {title: "UART to use for stderr and stdout debug comunication"}]
+        - ["modbus.stdout_uart_no", "i", 1, {title: "UART for stdout. Negative value disables stdout."}]
+        - ["modbus.stderr_uart_no", "i", 1, {title: "UART for stderr. Negative value disables stderr."}]
 
 libs:
+  - location: https://github.com/mongoose-os-libs/rpc-common
   
 tags:
   - c
