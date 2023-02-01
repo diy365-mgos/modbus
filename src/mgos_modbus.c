@@ -126,10 +126,9 @@ static bool mg_modbus_create_uart_context(int uart_no) {
     // save the UART receiver flag
     s_uart_context->orig_uart_rx_enabled = mgos_uart_is_rx_enabled(s_uart_context->uart_no);
     // save the UART original configuration
-    if (mgos_uart_config_get(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg)) {
-        s_uart_context->orig_uart_cfg_ready = true;
-    } else {
-        s_uart_context->orig_uart_cfg_ready = false;
+    s_uart_context->orig_uart_cfg_ready = true;
+    if (!mgos_uart_config_get(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg)) {
+        mgos_uart_config_set_defaults(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg);
     }
     // set the orig_stdout_uart_no
     s_uart_context->orig_stdout_uart_no = mgos_get_stdout_uart();
