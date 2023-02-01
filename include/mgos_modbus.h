@@ -223,7 +223,7 @@ char* mb_map_register_response(const char* json_map, struct mbuf* mb_resp, struc
 char* mb_map_register_responsef(const char* json_file, struct mbuf* mb_resp, struct mb_request_info* info);
 
 //Initialize the modbus connection
-bool mgos_modbus_connect();
+//bool mgos_modbus_connect();
 
 #ifdef __cplusplus
 }

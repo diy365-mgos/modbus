@@ -715,6 +715,7 @@ char* mb_map_register_responsef(const char* json_file, struct mbuf* mb_resp, str
     return resp;
 }
 
+/* 
 bool mgos_modbus_connect() {
     if (!mgos_sys_config_get_modbus_enable()) {
         return false;
@@ -739,7 +740,7 @@ bool mgos_modbus_connect() {
     #endif
     
     return true;
-}
+} */
 
 char* mb_resp_to_str(struct mbuf response) {
     int len = response.len * 2 + 3;
