@@ -76,7 +76,7 @@ struct mg_mdobus_uart_context {
     int stderr_uart_no;
     struct mgos_uart_config mb_uart_cfg;
 };
-static struct mg_mdobus_uart_context s_uart_context;
+static struct mg_mdobus_uart_context* s_uart_context = NULL;
 #endif
 
 static void print_buffer(struct mbuf buffer) {
@@ -117,85 +117,93 @@ static uint8_t verify_crc16(struct mbuf value) {
 
 #if CS_PLATFORM == CS_P_ESP8266
 static bool mg_modbus_create_uart_context(int uart_no) {
+    s_uart_context = calloc(1, sizeof(struct mg_mdobus_uart_context));
+    if (!s_uart_context)
+        return false;
+
     // save UART number
-    s_uart_context.uart_no = uart_no;
+    s_uart_context->uart_no = uart_no;
     // save the UART receiver flag
-    s_uart_context.orig_uart_rx_enabled = mgos_uart_is_rx_enabled(s_uart_context.uart_no);
+    s_uart_context->orig_uart_rx_enabled = mgos_uart_is_rx_enabled(s_uart_context->uart_no);
     // save the UART original configuration
-    if (!mgos_uart_config_get(s_uart_context.uart_no, &s_uart_context.orig_uart_cfg)) {
-        s_uart_context.orig_uart_cfg_ready = true;
+    if (!mgos_uart_config_get(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg)) {
+        s_uart_context->orig_uart_cfg_ready = true;
     } else {
-        s_uart_context.orig_uart_cfg_ready = false;
+        s_uart_context->orig_uart_cfg_ready = false;
     }
     // set the orig_stdout_uart_no
-    s_uart_context.orig_stdout_uart_no = mgos_get_stdout_uart();
+    s_uart_context->orig_stdout_uart_no = mgos_get_stdout_uart();
     // set the orig_stderr_uart_no
-    s_uart_context.orig_stderr_uart_no = mgos_get_stderr_uart();
+    s_uart_context->orig_stderr_uart_no = mgos_get_stderr_uart();
     // set the stdout_uart_no
-    s_uart_context.stdout_uart_no = mgos_sys_config_get_modbus_stdout_uart_no();
+    s_uart_context->stdout_uart_no = mgos_sys_config_get_modbus_stdout_uart_no();
     // set the stderr_uart_no
-    s_uart_context.stderr_uart_no = mgos_sys_config_get_modbus_stderr_uart_no();
+    s_uart_context->stderr_uart_no = mgos_sys_config_get_modbus_stderr_uart_no();
 
     // set MODBUS UART configuration
-    if (!mgos_uart_config_get(s_uart_context.uart_no, &s_uart_context.mb_uart_cfg)) {
-        mgos_uart_config_set_defaults(s_uart_context.uart_no, &s_uart_context.mb_uart_cfg);
+    if (!mgos_uart_config_get(s_uart_context->uart_no, &s_uart_context->mb_uart_cfg)) {
+        mgos_uart_config_set_defaults(s_uart_context->uart_no, &s_uart_context->mb_uart_cfg);
     }
-    s_uart_context.mb_uart_cfg.baud_rate = mgos_sys_config_get_modbus_baudrate();
+    s_uart_context->mb_uart_cfg.baud_rate = mgos_sys_config_get_modbus_baudrate();
     if (mgos_sys_config_get_modbus_parity() >= 0 && mgos_sys_config_get_modbus_parity() < 3) {
-        s_uart_context.mb_uart_cfg.parity = mgos_sys_config_get_modbus_parity();
+        s_uart_context->mb_uart_cfg.parity = mgos_sys_config_get_modbus_parity();
     }
     if (mgos_sys_config_get_modbus_stop_bits() > 0 && mgos_sys_config_get_modbus_stop_bits() < 4) {
-        s_uart_context.mb_uart_cfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
+        s_uart_context->mb_uart_cfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
     }
 
     LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
-                   s_uart_context.uart_no,
-                   s_uart_context.mb_uart_cfg.baud_rate,
-                   s_uart_context.mb_uart_cfg.parity,
-                   s_uart_context.mb_uart_cfg.stop_bits));
+                   s_uart_context->uart_no,
+                   s_uart_context->mb_uart_cfg.baud_rate,
+                   s_uart_context->mb_uart_cfg.parity,
+                   s_uart_context->mb_uart_cfg.stop_bits));
     
     return true;
 }
 
 static bool mg_modbus_reset_uart_cfg() {
-    if (s_uart_context.orig_uart_cfg_ready) {
+    if (!s_uart_context)
+        return false;
+    if (s_uart_context->orig_uart_cfg_ready) {
         // restore UART configuration
-        if (!mgos_uart_configure(s_uart_context.uart_no, &s_uart_context.orig_uart_cfg)) {
-            LOG(LL_ERROR, ("Failed to reset UART%d configuration", s_uart_context.uart_no));
+        if (!mgos_uart_configure(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg)) {
+            LOG(LL_ERROR, ("Failed to reset UART%d configuration", s_uart_context->uart_no));
         return false;
     }
     // restore the UART for stdout and stderr
-    if (!mgos_set_stdout_uart(s_uart_context.orig_stdout_uart_no) ||
-        !mgos_set_stderr_uart(s_uart_context.orig_stderr_uart_no)) {
+    if (!mgos_set_stdout_uart(s_uart_context->orig_stdout_uart_no) ||
+        !mgos_set_stderr_uart(s_uart_context->orig_stderr_uart_no)) {
         LOG(LL_ERROR, ("Failed to restore stdout on UART%d or stderr on UART%d",
-            s_uart_context.orig_stdout_uart_no, s_uart_context.orig_stderr_uart_no));
+            s_uart_context->orig_stdout_uart_no, s_uart_context->orig_stderr_uart_no));
         return false;
     }
     // restore UART receiver flag
-    mgos_uart_set_rx_enabled(s_uart_context.uart_no, s_uart_context.orig_uart_rx_enabled);
+    mgos_uart_set_rx_enabled(s_uart_context->uart_no, s_uart_context->orig_uart_rx_enabled);
     // restore UART dispatcher
-    mgos_uart_set_dispatcher(s_uart_context.uart_no, NULL, NULL);
+    mgos_uart_set_dispatcher(s_uart_context->uart_no, NULL, NULL);
     return true;
 }
 
 static bool mg_modbus_set_uart_cfg() {
+    if (!s_uart_context)
+        return false;
     // configure the UART for MODBUS communication
-    if (!mgos_uart_configure(s_uart_context.uart_no, &s_uart_context.mb_uart_cfg)) {
-        LOG(LL_ERROR, ("Failed to set UART%d configuration", s_uart_context.uart_no));
+    if (!mgos_uart_configure(s_uart_context->uart_no, &s_uart_context->mb_uart_cfg)) {
+        LOG(LL_ERROR, ("Failed to set UART%d configuration", s_uart_context->uart_no));
         return false;
     }
     // change the UART for stdout and stderr
-    if (!mgos_set_stdout_uart(s_uart_context.stdout_uart_no) || 
-        !mgos_set_stderr_uart(s_uart_context.stderr_uart_no)) {
+    if (!mgos_set_stdout_uart(s_uart_context->stdout_uart_no) || 
+        !mgos_set_stderr_uart(s_uart_context->stderr_uart_no)) {
         LOG(LL_ERROR, ("Failed to set stdout on UART%d or stderr on UART%d",
-            s_uart_context.stdout_uart_no, s_uart_context.stderr_uart_no));
+            s_uart_context->stdout_uart_no, s_uart_context->stderr_uart_no));
         mg_modbus_reset_uart_cfg();
         return false;
     }
     // enable UART receiver
-    mgos_uart_set_rx_enabled(s_uart_context.uart_no, true);
+    mgos_uart_set_rx_enabled(s_uart_context->uart_no, true);
     // set UART dispatcher
-    mgos_uart_set_dispatcher(s_uart_context.uart_no, uart_cb, &s_req_timer);
+    mgos_uart_set_dispatcher(s_uart_context->uart_no, uart_cb, &s_req_timer);
     return true;
 }
 #endif
@@ -438,11 +446,13 @@ static bool start_transaction() {
 
     if (s_modbus->read_state == DISABLED && s_modbus->transmit_buffer.len > 0) {
         LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Modbus Transaction Start", s_modbus->slave_id_u8, s_modbus->func_code_u8));
+        #if CS_PLATFORM == CS_P_ESP8266
+        if (!mg_modbus_set_uart_cfg()) {
+            return false;
+        }
+        #endif
         s_modbus->read_state = READ_START;
         mgos_uart_flush(s_modbus->uart_no);
-        #if CS_PLATFORM == CS_P_ESP8266
-        mg_modbus_set_uart_cfg();
-        #endif
         mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
