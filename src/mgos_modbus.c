@@ -168,13 +168,15 @@ static bool mg_modbus_reset_uart_cfg() {
         // restore UART configuration
         if (!mgos_uart_configure(s_uart_context->uart_no, &s_uart_context->orig_uart_cfg)) {
             LOG(LL_ERROR, ("Failed to reset UART%d configuration", s_uart_context->uart_no));
-        return false;
+            return false;
+        }
     }
     // restore the UART for stdout and stderr
     if (!mgos_set_stdout_uart(s_uart_context->orig_stdout_uart_no) ||
         !mgos_set_stderr_uart(s_uart_context->orig_stderr_uart_no)) {
         LOG(LL_ERROR, ("Failed to restore stdout on UART%d or stderr on UART%d",
-            s_uart_context->orig_stdout_uart_no, s_uart_context->orig_stderr_uart_no));
+            s_uart_context->orig_stdout_uart_no,
+            s_uart_context->orig_stderr_uart_no));
         return false;
     }
     // restore UART receiver flag
