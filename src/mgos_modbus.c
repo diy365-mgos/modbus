@@ -184,6 +184,8 @@ static bool mg_modbus_reset_uart_cfg() {
     return true;
 }
 
+void uart_cb(int uart_no, void* param);
+
 static bool mg_modbus_set_uart_cfg() {
     if (!s_uart_context)
         return false;
