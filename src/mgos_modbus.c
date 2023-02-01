@@ -76,7 +76,7 @@ struct mg_mdobus_uart_context {
     int stderr_uart_no;
     struct mgos_uart_config mb_uart_cfg;
 };
-struct mg_mdobus_uart_ctx s_uart_context;
+static struct mg_mdobus_uart_context s_uart_context;
 #endif
 
 static void print_buffer(struct mbuf buffer) {
