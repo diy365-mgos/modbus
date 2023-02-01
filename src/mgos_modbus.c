@@ -274,7 +274,7 @@ static void uart_cb(int uart_no, void* param) {
 }
 
 static bool init_modbus(uint8_t slave_id, uint8_t func_code, uint8_t total_resp_bytes, mb_response_callback cb, void* cb_arg) {
-    if (s_modbus->read_state != DISABLED)
+    if (s_modbus == NULL || s_modbus->read_state != DISABLED)
         return false;
     s_modbus->cb = cb;
     s_modbus->cb_arg = cb_arg;
