@@ -32,6 +32,9 @@ conds:
         - ["modbus.uart_no", "i", 0, {title: "UART to use for Modbus communication"}]
         - ["modbus.stdout_uart_no", "i", 1, {title: "UART for stdout. Negative value disables stdout."}]
         - ["modbus.stderr_uart_no", "i", 1, {title: "UART for stderr. Negative value disables stderr."}]
+        - ["modbus.disable_gpio", "o", {title: "GPIO settings for disabling Modbus communication"}]
+        - ["modbus.disable_gpio.pin", "i", 13, {title: "Pin for disabling Modbus"}]
+        - ["modbus.disable_gpio.pull_up", "b", true, {title: "True if pin is pulled up when inactive"}]
 
 libs:
   - location: https://github.com/mongoose-os-libs/rpc-common

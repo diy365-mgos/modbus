@@ -225,6 +225,8 @@ char* mb_map_register_responsef(const char* json_file, struct mbuf* mb_resp, str
 //Initialize the modbus connection
 //bool mgos_modbus_connect();
 
+bool mgos_modbus_is_enabled();
+
 #ifdef __cplusplus
 }
 #endif
