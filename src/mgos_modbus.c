@@ -503,7 +503,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
 
     #if CS_PLATFORM == CS_P_ESP8266
     LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
-                   ucfg.uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
+                   cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
     if (!mgos_set_stdout_uart(mgos_sys_config_get_modbus_stdout_uart_no())) {
         LOG(LL_ERROR, ("Failed to set stdout on UART%d", mgos_sys_config_get_modbus_stdout_uart_no()));
@@ -867,7 +867,8 @@ bool mgos_modbus_init(void) {
     if (mgos_sys_config_get_modbus_disable_gpio_pin() != -1) {
         if (!mgos_gpio_setup_input(mgos_sys_config_get_modbus_disable_gpio_pin(),
                                    (mgos_sys_config_get_modbus_disable_gpio_pull_up() ? MGOS_GPIO_PULL_UP : MGOS_GPIO_PULL_DOWN))) {
-            LOG(LL_ERROR, ("Unable to configure GPIO %d for disabling Modbus."));
+            LOG(LL_ERROR, ("Unable to configure GPIO %d for disabling Modbus.",
+                mgos_sys_config_get_modbus_disable_gpio_pin()));
             return false;
         }
     }    
