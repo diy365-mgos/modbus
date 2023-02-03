@@ -232,6 +232,7 @@ static void update_modbus_read_state(struct mbuf* buffer) {
     }
     print_buffer(s_modbus->receive_buffer);
     mgos_clear_timer(s_req_timer);
+    s_req_timer = 0;
     s_modbus->cb(s_modbus->resp_status_u8, ri, s_modbus->receive_buffer, s_modbus->cb_arg);
     s_modbus->read_state = DISABLED;
 }
@@ -338,7 +339,7 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
         //mgos_uart_set_rx_enabled(s_modbus->uart_no, true);
-        //mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
+        mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         return true;
     }
     return false;
