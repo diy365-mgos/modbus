@@ -213,8 +213,14 @@ Sample json map:
 //Parses the modbus response buffer from the start point to a 32 bit inverse long type
 long parse_value_long_inverse_32(uint8_t* strt_ptr);
 
+//Parses the modbus response buffer from the start point to a 32 bit long type
+long parse_value_long_32(uint8_t* strt_ptr);
+
 //Parses the modbus response buffer from the start point to 32 bit float type
 float parse_value_float32(uint8_t* strt_ptr);
+
+//Parses the modbus response buffer from the start point to a 16 bit int type
+int parse_value_int(uint8_t* strt_ptr);
 
 //Maps the modbus response to a json with the given json map
 char* mb_map_register_response(const char* json_map, struct mbuf* mb_resp, struct mb_request_info* info);

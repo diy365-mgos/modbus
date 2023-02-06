@@ -588,6 +588,24 @@ float parse_value_float32(uint8_t* strt_ptr) {
     return u.f;
 }
 
+int parse_value_int(uint8_t* strt_ptr) {
+  int v = strt_ptr[0] << 8;
+  return (v + strt_ptr[1]);
+}
+
+long parse_value_long_32(uint8_t* strt_ptr) {
+    union {
+        uint8_t c[4];
+        long l;
+    } u;
+    //Setting modbus DCBA to C memory DCBA for long conversion
+    u.c[3] = strt_ptr[2];  //D
+    u.c[2] = strt_ptr[3];  //C
+    u.c[1] = strt_ptr[0];  //B
+    u.c[0] = strt_ptr[1];  //A
+    return u.l;
+}
+
 enum MB_VALUE_TYPE parse_address_info(struct json_token address_info, int* address) {
     *address = -1;
     enum MB_VALUE_TYPE type = MAP_TYPE_HEX;
