@@ -118,7 +118,7 @@ static void req_timeout_cb(void* arg) {
     };
     s_modbus->cb(RESP_TIMED_OUT, ri, s_modbus->receive_buffer, s_modbus->cb_arg);
     s_modbus->read_state = DISABLED;
-    s_req_timer = 0;
+    s_req_timer = MGOS_INVALID_TIMER_ID;
     (void)arg;
 }
 
@@ -232,7 +232,7 @@ static void update_modbus_read_state(struct mbuf* buffer) {
     }
     print_buffer(s_modbus->receive_buffer);
     mgos_clear_timer(s_req_timer);
-    s_req_timer = 0;
+    s_req_timer = MGOS_INVALID_TIMER_ID ;
     s_modbus->cb(s_modbus->resp_status_u8, ri, s_modbus->receive_buffer, s_modbus->cb_arg);
     s_modbus->read_state = DISABLED;
 }
