@@ -66,7 +66,7 @@ static mgos_timer_id s_req_timer;
 
 #if CS_PLATFORM == CS_P_ESP8266
 struct mg_modbus_uart_ctx {
-    int std_uart_no;
+    int uart_no;
     struct mgos_uart_config std_cfg;
     bool std_rx_enable;
     struct mgos_uart_config mb_cfg;
