@@ -64,6 +64,92 @@ struct rpc_info {
 static struct mgos_modbus* s_modbus = NULL;
 static mgos_timer_id s_req_timer;
 
+#if CS_PLATFORM == CS_P_ESP8266
+struct mg_modbus_uart_ctx {
+    int std_uart_no;
+    struct mgos_uart_config std_cfg;
+    bool std_rx_enable;
+    struct mgos_uart_config mb_cfg;
+    int stderr_pin;
+    int stdout_pin;
+};
+static struct mg_modbus_uart_ctx* s_uart_ctx = NULL;
+
+static bool mg_modbus_create_uart_ctx(int uart_no) {
+    if (s_uart_ctx) { free(s_uart_ctx); }
+    s_uart_ctx = calloc(1, sizeof(struct mg_modbus_uart_ctx ));
+    if (s_uart_ctx) {
+        s_uart_ctx->uart_no = uart_no;
+
+        // Get standard UART settings
+        if (!mgos_uart_config_get(s_uart_ctx->uart_no, &s_uart_ctx->std_cfg)) {
+            mgos_uart_config_set_defaults(s_uart_ctx->uart_no, &s_uart_ctx->std_cfg);
+        }
+        s_uart_ctx->std_rx_enable = mgos_uart_is_rx_enabled(s_uart_ctx->uart_no);
+
+        // Get Modbus UART settings
+        mgos_uart_config_set_defaults(s_uart_ctx->uart_no, &s_uart_ctx->mb_cfg);
+        s_uart_ctx->mb_cfg.baud_rate = mgos_sys_config_get_modbus_baudrate();
+        if (mgos_sys_config_get_modbus_parity() >= 0 && mgos_sys_config_get_modbus_parity() < 3) {
+            s_uart_ctx->mb_cfg.parity = mgos_sys_config_get_modbus_parity();
+        }
+        if (mgos_sys_config_get_modbus_stop_bits() > 0 && mgos_sys_config_get_modbus_stop_bits() < 4) {
+            s_uart_ctx->mb_cfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
+        }
+        LOG(LL_INFO, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
+            s_uart_ctx->uart_no, s_uart_ctx->mb_cfg.baud_rate, 
+            s_uart_ctx->mb_cfg.parity, s_uart_ctx->mb_cfg.stop_bits));
+        // Get DEBUG(UART) settings
+        s_uart_ctx->stderr_pin = mgos_get_stderr_uart();
+        s_uart_ctx->stdout_pin = mgos_get_stdout_uart();
+    }
+    return (s_uart_ctx != NULL);
+}
+
+static bool mg_modbus_reset_uart_ctx() {
+    if (!s_uart_ctx) return false;
+
+    if (mgos_set_stderr_uart(s_uart_ctx->stderr_pin)) {
+        if (mgos_set_stdout_uart(s_uart_ctx->stdout_pin)) {
+            if (mgos_uart_configure(s_uart_ctx->uart_no, &s_uart_ctx->std_cfg)) {
+                mgos_uart_set_rx_enabled(s_uart_ctx->uart_no, s_uart_ctx->std_rx_enable);
+                return true;
+            } 
+        } else {
+            LOG(LL_ERROR, ("Failed to reset stdout on UART%d", s_uart_ctx->stdout_pin));
+        }
+    } else {
+        LOG(LL_ERROR, ("Failed to reset stderr on UART%d", s_uart_ctx->stderr_pin));
+    }
+    
+    LOG(LL_ERROR, ("Failed to rollback UART%d configuration", s_uart_ctx->uart_no));
+    return false;
+}
+
+static void uart_cb(int uart_no, void* param);
+static bool mg_modbus_set_uart_ctx() {
+    if (!s_uart_ctx) return false;
+
+    if (mgos_set_stdout_uart(mgos_sys_config_get_modbus_stdout_uart_no())) {
+        if (mgos_set_stderr_uart(mgos_sys_config_get_modbus_stderr_uart_no())) {
+            if (mgos_uart_configure(s_uart_ctx->uart_no, &s_uart_ctx->mb_cfg)) {
+                mgos_uart_set_rx_enabled(s_uart_ctx->uart_no, true);
+                mgos_uart_set_dispatcher(s_uart_ctx->uart_no, uart_cb, &s_req_timer);
+                return true;
+            } 
+        } else {
+            LOG(LL_ERROR, ("Failed to set stderr on UART%d", mgos_sys_config_get_modbus_stderr_uart_no()));
+        }
+    } else {
+        LOG(LL_ERROR, ("Failed to set stdout on UART%d", mgos_sys_config_get_modbus_stdout_uart_no()));
+    }
+    
+    mg_modbus_reset_uart_ctx();
+    LOG(LL_ERROR, ("Failed to configure UART%d", s_uart_ctx->uart_no));
+    return false;
+}
+#endif
+
 static void print_buffer(struct mbuf buffer) {
     char str[1024];
     int length = 0;
@@ -104,6 +190,7 @@ static uint8_t verify_crc16(struct mbuf value) {
 Callback function that is called when a set timeout period expires before receiving a response.
 */
 static void req_timeout_cb(void* arg) {
+    mg_modbus_reset_uart_ctx();
     LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Request timed out", s_modbus->slave_id_u8, s_modbus->func_code_u8));
     s_modbus->resp_status_u8 = RESP_TIMED_OUT;
     struct mb_request_info ri = {
@@ -230,6 +317,7 @@ static void update_modbus_read_state(struct mbuf* buffer) {
         default:
             return;
     }
+    mg_modbus_reset_uart_ctx();
     print_buffer(s_modbus->receive_buffer);
     mgos_clear_timer(s_req_timer);
     s_req_timer = MGOS_INVALID_TIMER_ID ;
@@ -333,14 +421,15 @@ static bool start_transaction() {
 
     if (s_modbus->read_state == DISABLED && s_modbus->transmit_buffer.len > 0) {
         LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Modbus Transaction Start", s_modbus->slave_id_u8, s_modbus->func_code_u8));
-        s_modbus->read_state = READ_START;
-        mgos_uart_flush(s_modbus->uart_no);
-        mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
-        s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
-        mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
-        //mgos_uart_set_rx_enabled(s_modbus->uart_no, true);
-        mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
-        return true;
+        if (mg_modbus_set_uart_ctx()) {
+            s_modbus->read_state = READ_START;
+            mgos_uart_flush(s_modbus->uart_no);
+            mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
+            s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
+            mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+            //mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
+            return true;
+        }
     }
     return false;
 }
@@ -492,6 +581,12 @@ bool mb_mask_write_register(uint8_t slave_id, uint16_t address, uint16_t and_mas
 }
 
 bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
+    #if CS_PLATFORM == CS_P_ESP8266
+    if (!mg_modbus_create_uart_ctx(cfg->uart_no)){
+        LOG(LL_ERROR, ("Failed to create UART%d context", cfg->uart_no));
+        return false;
+    }
+    #else
     struct mgos_uart_config ucfg;
     mgos_uart_config_set_defaults(cfg->uart_no, &ucfg);
     ucfg.baud_rate = mgos_sys_config_get_modbus_baudrate();
@@ -502,19 +597,19 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
         ucfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
     }
 
-    #if CS_PLATFORM == CS_P_ESP8266
-    LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
-                   cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
+    // #if CS_PLATFORM == CS_P_ESP8266
+    // LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
+    //                cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
-    if (!mgos_set_stdout_uart(mgos_sys_config_get_modbus_stdout_uart_no())) {
-        LOG(LL_ERROR, ("Failed to set stdout on UART%d", mgos_sys_config_get_modbus_stdout_uart_no()));
-        return false;
-    }
-    if (!mgos_set_stderr_uart(mgos_sys_config_get_modbus_stderr_uart_no())) {
-        LOG(LL_ERROR, ("Failed to set stderr on UART%d", mgos_sys_config_get_modbus_stderr_uart_no()));
-        return false;
-    }
-    #else
+    // if (!mgos_set_stdout_uart(mgos_sys_config_get_modbus_stdout_uart_no())) {
+    //     LOG(LL_ERROR, ("Failed to set stdout on UART%d", mgos_sys_config_get_modbus_stdout_uart_no()));
+    //     return false;
+    // }
+    // if (!mgos_set_stderr_uart(mgos_sys_config_get_modbus_stderr_uart_no())) {
+    //     LOG(LL_ERROR, ("Failed to set stderr on UART%d", mgos_sys_config_get_modbus_stderr_uart_no()));
+    //     return false;
+    // }
+    // #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
         ucfg.dev.rx_gpio = mgos_sys_config_get_modbus_uart_rx_pin();
     }
@@ -535,13 +630,12 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
                    ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
     #endif
 
-    if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
-        LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
-        return false;
-    }
+    // if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
+    //     LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
+    //     return false;
+    // }
 
-    mgos_uart_set_rx_enabled(cfg->uart_no, true);
-    mgos_uart_set_dispatcher(cfg->uart_no, uart_cb, &s_req_timer);
+    // mgos_uart_set_rx_enabled(cfg->uart_no, true);
 
     s_modbus = (struct mgos_modbus*)calloc(1, sizeof(*s_modbus));
     if (s_modbus == NULL)
