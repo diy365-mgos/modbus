@@ -962,13 +962,13 @@ bool mgos_modbus_is_enabled() {
         return false;
     }
     #if CS_PLATFORM == CS_P_ESP8266
-    if (mgos_sys_config_get_modbus_disable_gpio_pin() != -1) {
-        bool gpio_value = mgos_gpio_read(mgos_sys_config_get_modbus_disable_gpio_pin());
-        if (mgos_sys_config_get_modbus_disable_gpio_pull_up() != gpio_value) {
-            // Modbus is disabled by GPIO for
-            return false;
-        }
-    }
+    // if (mgos_sys_config_get_modbus_disable_gpio_pin() != -1) {
+    //     bool gpio_value = mgos_gpio_read(mgos_sys_config_get_modbus_disable_gpio_pin());
+    //     if (mgos_sys_config_get_modbus_disable_gpio_pull_up() != gpio_value) {
+    //         // Modbus is disabled by GPIO for
+    //         return false;
+    //     }
+    // }
     #endif
     return true; // Modbus is enabled 
 }
@@ -977,14 +977,14 @@ bool mgos_modbus_init(void) {
     LOG(LL_DEBUG, ("Initializing modbus"));
 
     #if CS_PLATFORM == CS_P_ESP8266
-    if (mgos_sys_config_get_modbus_disable_gpio_pin() != -1) {
-        if (!mgos_gpio_setup_input(mgos_sys_config_get_modbus_disable_gpio_pin(),
-                                   (mgos_sys_config_get_modbus_disable_gpio_pull_up() ? MGOS_GPIO_PULL_UP : MGOS_GPIO_PULL_DOWN))) {
-            LOG(LL_ERROR, ("Unable to configure GPIO %d for disabling Modbus.",
-                mgos_sys_config_get_modbus_disable_gpio_pin()));
-            return false;
-        }
-    }    
+    // if (mgos_sys_config_get_modbus_disable_gpio_pin() != -1) {
+    //     if (!mgos_gpio_setup_input(mgos_sys_config_get_modbus_disable_gpio_pin(),
+    //                                (mgos_sys_config_get_modbus_disable_gpio_pull_up() ? MGOS_GPIO_PULL_UP : MGOS_GPIO_PULL_DOWN))) {
+    //         LOG(LL_ERROR, ("Unable to configure GPIO %d for disabling Modbus.",
+    //             mgos_sys_config_get_modbus_disable_gpio_pin()));
+    //         return false;
+    //     }
+    // }    
     #endif
 
     if (!mgos_modbus_is_enabled()) {
