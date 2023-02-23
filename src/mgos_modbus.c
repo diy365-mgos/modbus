@@ -18,6 +18,9 @@
 
 #include "crc16.h"
 #include "mgos_rpc.h"
+#if CS_PLATFORM == CS_P_ESP8266
+#include "mgos_softuart.h"
+#endif
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define lowByte(w) ((uint8_t)((w)&0xff))
@@ -40,6 +43,9 @@ struct mgos_modbus {
     mb_response_callback cb;
     void* cb_arg;
     int uart_no;
+    #if CS_PLATFORM == CS_P_ESP8266
+    mgos_softuart_t uart;
+    #endif
     uint8_t slave_id_u8;
     uint16_t read_address_u16;
     uint16_t read_qty_u16;
@@ -504,6 +510,17 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     #if CS_PLATFORM == CS_P_ESP8266
     LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
+
+    if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
+        LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
+        return false;
+    }
+
+    mgos_softuart_t uart = mgos_softuart_create(mgos_sys_config_get_modbus_uart_rx_pin(),
+                                                MGOS_GPIO_PULL_UP, -1, &ucfg);
+    if (!uart) return false;
+
+    mgos_uart_set_rx_enabled(cfg->uart_no, false);
     #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
         ucfg.dev.rx_gpio = mgos_sys_config_get_modbus_uart_rx_pin();
@@ -523,7 +540,6 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
                    mgos_gpio_str(ucfg.dev.tx_gpio, b2),
                    mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
                    ucfg.parity, ucfg.stop_bits, ucfg.dev.hd, ucfg.dev.tx_en_gpio_val));
-    #endif
 
     if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
         LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
@@ -531,6 +547,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     }
 
     mgos_uart_set_rx_enabled(cfg->uart_no, true);
+    #endif
 
     s_modbus = (struct mgos_modbus*)calloc(1, sizeof(*s_modbus));
     if (s_modbus == NULL)
@@ -539,6 +556,9 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     mbuf_init(&s_modbus->receive_buffer, 300);
     s_modbus->read_state = DISABLED;
     s_modbus->uart_no = cfg->uart_no;
+    #if CS_PLATFORM == CS_P_ESP8266
+    s_modbus->uart = cfg->uart;
+    #endif
 
     return true;
 }
