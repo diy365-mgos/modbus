@@ -28,13 +28,11 @@ conds:
         - ["modbus.tx_en_gpio_val", "b", true, {title: "TX enable value"}]
   - when: mos.platform == "esp8266"
     apply:
+      libs:
+        - location: https://github.com/diy365-mgos/softuart
       config_schema:
-        - ["modbus.uart_no", "i", 0, {title: "UART to use for Modbus communication"}]
-        - ["modbus.stdout_uart_no", "i", 1, {title: "UART for stdout. Negative value disables stdout."}]
-        - ["modbus.stderr_uart_no", "i", 1, {title: "UART for stderr. Negative value disables stderr."}]
-        - ["modbus.disable_gpio", "o", {title: "GPIO settings for disabling Modbus communication"}]
-        - ["modbus.disable_gpio.pin", "i", 13, {title: "Pin for disabling Modbus"}]
-        - ["modbus.disable_gpio.pull_up", "b", true, {title: "True if pin is pulled up when inactive"}]
+        - ["modbus.uart_tx_pin", "i", 26, {title: "UART to use for Modbus communication"}]
+        - ["modbus.uart_rx_pin", "i", 25, {title: "UART to use for Modbus communication"}]
 
 libs:
   - location: https://github.com/mongoose-os-libs/rpc-common
