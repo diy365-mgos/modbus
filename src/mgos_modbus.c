@@ -243,17 +243,33 @@ static void update_modbus_read_state(struct mbuf* buffer) {
     s_modbus->read_state = DISABLED;
 }
 
+#if CS_PLATFORM == CS_P_ESP8266
+static void uart_cb(mgos_softuart_t uart, void* param) {
+#else
 static void uart_cb(int uart_no, void* param) {
+#endif
     (void)param;
+    #if CS_PLATFORM == CS_P_ESP8266
+    assert(uart == s_modbus->uart);
+    #else
     assert(uart_no == s_modbus->uart_no);
+    #endif
     struct mbuf* buffer = &s_modbus->receive_buffer;
 
+    #if CS_PLATFORM == CS_P_ESP8266
+    size_t rx_av = mgos_softuart_read_avail(uart);
+    #else
     size_t rx_av = mgos_uart_read_avail(uart_no);
+    #endif
     if (rx_av == 0) {
         return;
     }
 
-    mgos_uart_read_mbuf(uart_no, buffer, rx_av);
+    #if CS_PLATFORM == CS_P_ESP8266
+    mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
+    #else
+    mgos_uart_read_mbuf(uart, buffer, rx_av);
+    #endif
     LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
                            s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
     update_modbus_read_state(buffer);
@@ -344,7 +360,11 @@ static bool start_transaction() {
         mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+        #if CS_PLATFORM == CS_P_ESP8266
+        mgos_softuart_set_dispatcher(s_modbus->uart, uart_cb, &s_req_timer);
+        #else
         mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
+        #endif
         return true;
     }
     return false;
