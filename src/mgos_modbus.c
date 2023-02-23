@@ -557,7 +557,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     s_modbus->read_state = DISABLED;
     s_modbus->uart_no = cfg->uart_no;
     #if CS_PLATFORM == CS_P_ESP8266
-    s_modbus->uart = cfg->uart;
+    s_modbus->uart = uart;
     #endif
 
     return true;
