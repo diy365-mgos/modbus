@@ -266,7 +266,7 @@ static void uart_cb(int uart_no, void* param) {
     }
 
     #if CS_PLATFORM == CS_P_ESP8266
-    mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
+    mgos_softuart_read_mbuf(uart, buffer, rx_av);
     #else
     mgos_uart_read_mbuf(uart, buffer, rx_av);
     #endif
