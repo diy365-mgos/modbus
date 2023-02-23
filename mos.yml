@@ -31,6 +31,7 @@ conds:
       libs:
         - location: https://github.com/diy365-mgos/softuart
       config_schema:
+        - ["modbus.uart_no", "i", 1, {title: "UART to use for Modbus communication"}]
         - ["modbus.uart_tx_pin", "i", 26, {title: "UART to use for Modbus communication"}]
         - ["modbus.uart_rx_pin", "i", 25, {title: "UART to use for Modbus communication"}]
 
