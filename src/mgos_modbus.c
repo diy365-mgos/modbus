@@ -539,7 +539,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     mgos_softuart_t uart = mgos_softuart_create(mgos_sys_config_get_modbus_uart_rx_pin(),
                                                 MGOS_GPIO_PULL_UP, -1, &ucfg);
     if (!uart) return false;
-
+    mgos_softuart_set_rx_enabled(cfg->uart, true);
     mgos_uart_set_rx_enabled(cfg->uart_no, false);
     #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
