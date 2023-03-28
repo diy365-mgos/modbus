@@ -43,9 +43,6 @@ struct mgos_modbus {
     mb_response_callback cb;
     void* cb_arg;
     int uart_no;
-    #if CS_PLATFORM == CS_P_ESP8266
-    int softuart_no;
-    #endif
     uint8_t slave_id_u8;
     uint16_t read_address_u16;
     uint16_t read_qty_u16;
@@ -245,11 +242,7 @@ static void update_modbus_read_state(struct mbuf* buffer) {
 
 static void uart_cb(int uart_no, void* param) {
     (void)param;
-    #if CS_PLATFORM == CS_P_ESP8266
-    assert(uart_no == s_modbus->softuart_no);
-    #else
     assert(uart_no == s_modbus->uart_no);
-    #endif
     struct mbuf* buffer = &s_modbus->receive_buffer;
 
     #if CS_PLATFORM == CS_P_ESP8266
@@ -357,7 +350,7 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_set_dispatcher(s_modbus->softuart_no, uart_cb, &s_req_timer);
+        mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #else
         mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #endif
@@ -525,7 +518,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
 
     #if CS_PLATFORM == CS_P_ESP8266
     struct mgos_softuart_config sucfg;
-    mgos_softuart_config_set_defaults(cfg->softuart_no, &sucfg);
+    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
     sucfg.baud_rate = ucfg.baud_rate;
     sucfg.parity = ucfg.parity;
     sucfg.stop_bits = ucfg.stop_bits;
@@ -538,12 +531,12 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
         return false;
     }
 
-    if (!mgos_softuart_configure(cfg->softuart_no, &sucfg)) {
-        LOG(LL_ERROR, ("Failed to configure SOFTUART%d", cfg->softuart_no));
+    if (!mgos_softuart_configure(cfg->uart_no, &sucfg)) {
+        LOG(LL_ERROR, ("Failed to configure SOFTUART%d", cfg->uart_no));
         return false;
     }
 
-    mgos_softuart_set_rx_enabled(cfg->softuart_no, true);
+    mgos_softuart_set_rx_enabled(cfg->uart_no, true);
     mgos_uart_set_rx_enabled(cfg->uart_no, false);
     #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
@@ -580,9 +573,6 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     mbuf_init(&s_modbus->receive_buffer, 300);
     s_modbus->read_state = DISABLED;
     s_modbus->uart_no = cfg->uart_no;
-    #if CS_PLATFORM == CS_P_ESP8266
-    s_modbus->uart = uart;
-    #endif
 
     return true;
 }
