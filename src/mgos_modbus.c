@@ -246,7 +246,7 @@ static void uart_cb(int uart_no, void* param) {
     struct mbuf* buffer = &s_modbus->receive_buffer;
 
     #if CS_PLATFORM == CS_P_ESP8266
-    size_t rx_av = mgos_softuart_read_avail(uart_no);
+    size_t rx_av = mgos_softuart_read_avail(0);
     #else
     size_t rx_av = mgos_uart_read_avail(uart_no);
     #endif
@@ -255,7 +255,7 @@ static void uart_cb(int uart_no, void* param) {
     }
 
     #if CS_PLATFORM == CS_P_ESP8266
-    mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
+    mgos_softuart_read_mbuf(0, buffer, rx_av);
     #else
     mgos_uart_read_mbuf(uart_no, buffer, rx_av);
     #endif
@@ -350,7 +350,7 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
+        mgos_softuart_set_dispatcher(0, uart_cb, &s_req_timer);
         #else
         mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #endif
@@ -518,7 +518,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
 
     #if CS_PLATFORM == CS_P_ESP8266
     struct mgos_softuart_config sucfg;
-    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
+    mgos_softuart_config_set_defaults(0, &sucfg);
     sucfg.baud_rate = ucfg.baud_rate;
     sucfg.parity = ucfg.parity;
     sucfg.stop_bits = ucfg.stop_bits;
@@ -531,12 +531,12 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
         return false;
     }
 
-    if (!mgos_softuart_configure(cfg->uart_no, &sucfg)) {
-        LOG(LL_ERROR, ("Failed to configure SOFTUART%d", cfg->uart_no));
+    if (!mgos_softuart_configure(0, &sucfg)) {
+        LOG(LL_ERROR, ("Failed to configure SOFTUART%d", 0));
         return false;
     }
 
-    mgos_softuart_set_rx_enabled(cfg->uart_no, true);
+    mgos_softuart_set_rx_enabled(0, true);
     mgos_uart_set_rx_enabled(cfg->uart_no, false);
     #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
