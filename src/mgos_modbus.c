@@ -73,8 +73,7 @@ static void print_buffer(struct mbuf buffer) {
     for (int i = 0; i < buffer.len && i < sizeof(str) / 3; i++) {
         length += sprintf(str + length, "%.2x ", buffer.buf[i]);
     }
-    //LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Buffer: %.*s", s_modbus->slave_id_u8, s_modbus->func_code_u8, length, str));
-    LOG(LL_INFO, ("SlaveID: %.2x, Function: %.2x - Buffer: %.*s", s_modbus->slave_id_u8, s_modbus->func_code_u8, length, str));
+    LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Buffer: %.*s", s_modbus->slave_id_u8, s_modbus->func_code_u8, length, str));
 }
 
 static size_t mbuf_append_16(struct mbuf* buffer, uint16_t value) {
