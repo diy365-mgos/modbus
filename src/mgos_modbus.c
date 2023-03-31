@@ -120,9 +120,6 @@ static void req_timeout_cb(void* arg) {
         s_modbus->func_code_u8,
     };
     
-    LOG(LL_INFO,("TIMEOUT ==>"));
-    print_buffer(s_modbus->receive_buffer);
-
     s_modbus->cb(RESP_TIMED_OUT, ri, s_modbus->receive_buffer, s_modbus->cb_arg);
     s_modbus->read_state = DISABLED;
     s_req_timer = MGOS_INVALID_TIMER_ID;
@@ -267,6 +264,7 @@ static void uart_cb(int uart_no, void* param) {
     //LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
     LOG(LL_INFO, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
                              s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
+    print_buffer(s_modbus->receive_buffer); //TODO: remove
 
     update_modbus_read_state(buffer);
 }
