@@ -73,7 +73,7 @@ static void print_buffer(struct mbuf buffer) {
     for (int i = 0; i < buffer.len && i < sizeof(str) / 3; i++) {
         length += sprintf(str + length, "%.2x ", buffer.buf[i]);
     }
-    LOG(LL_INFO, ("SlaveID: %.2x, Function: %.2x - Buffer: %.*s", s_modbus->slave_id_u8, s_modbus->func_code_u8, length, str));
+    LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Buffer: %.*s", s_modbus->slave_id_u8, s_modbus->func_code_u8, length, str));
 }
 
 static size_t mbuf_append_16(struct mbuf* buffer, uint16_t value) {
@@ -261,10 +261,8 @@ static void uart_cb(int uart_no, void* param) {
     #else
     mgos_uart_read_mbuf(uart_no, buffer, rx_av);
     #endif
-    //LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
-    LOG(LL_INFO, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
-                             s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
-    print_buffer(s_modbus->receive_buffer); //TODO: remove
+    LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
+                           s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
 
     update_modbus_read_state(buffer);
 }
