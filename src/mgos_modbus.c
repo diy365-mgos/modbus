@@ -348,10 +348,18 @@ static bool start_transaction() {
     if (s_modbus->read_state == DISABLED && s_modbus->transmit_buffer.len > 0) {
         LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Modbus Transaction Start", s_modbus->slave_id_u8, s_modbus->func_code_u8));
         s_modbus->read_state = READ_START;
+        #if CS_PLATFORM == CS_P_ESP8266
+        mgos_softuart_flush(0);
+        #else
         mgos_uart_flush(s_modbus->uart_no);
+        #endif
         mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
+        #if CS_PLATFORM == CS_P_ESP8266
+        mgos_softuart_write(0, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+        #else
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+        #endif
         #if CS_PLATFORM == CS_P_ESP8266
         mgos_softuart_set_dispatcher(0, uart_cb, &s_req_timer);
         #else
