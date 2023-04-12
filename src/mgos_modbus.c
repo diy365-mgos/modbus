@@ -533,7 +533,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
         ucfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
     }
 
-    #if CS_PLATFORM == CS_P_ESP826
+    #if CS_PLATFORM == CS_P_ESP8266
     LOG(LL_INFO, ("MODBUS SOFTUART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
