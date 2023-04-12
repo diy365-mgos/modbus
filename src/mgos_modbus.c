@@ -518,8 +518,8 @@ bool mb_mask_write_register(uint8_t slave_id, uint16_t address, uint16_t and_mas
 
 bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     #if CS_PLATFORM == CS_P_ESP8266
-    struct mgos_softuart_config sucfg;
-    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
+    struct mgos_softuart_config ucfg;
+    mgos_softuart_config_set_defaults(cfg->uart_no, &ucfg);
     #else
     struct mgos_uart_config ucfg;
     mgos_uart_config_set_defaults(cfg->uart_no, &ucfg);
@@ -537,7 +537,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     LOG(LL_INFO, ("MODBUS SOFTUART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
-    if (!mgos_softuart_configure(cfg->uart_no, &sucfg)) {
+    if (!mgos_softuart_configure(cfg->uart_no, &ucfg)) {
         LOG(LL_ERROR, ("Failed to configure SOFTUART%d", 0));
         return false;
     }
