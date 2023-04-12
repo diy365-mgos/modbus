@@ -248,7 +248,7 @@ static void uart_cb(int uart_no, void* param) {
     struct mbuf* buffer = &s_modbus->receive_buffer;
 
     #if CS_PLATFORM == CS_P_ESP8266
-    size_t rx_av = mgos_softuart_read_avail(0);
+    size_t rx_av = mgos_softuart_read_avail(uart_no);
     #else
     size_t rx_av = mgos_uart_read_avail(uart_no);
     #endif
@@ -257,7 +257,7 @@ static void uart_cb(int uart_no, void* param) {
     }
 
     #if CS_PLATFORM == CS_P_ESP8266
-    mgos_softuart_read_mbuf(0, buffer, rx_av);
+    mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
     #else
     mgos_uart_read_mbuf(uart_no, buffer, rx_av);
     #endif
@@ -349,19 +349,19 @@ static bool start_transaction() {
         LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Modbus Transaction Start", s_modbus->slave_id_u8, s_modbus->func_code_u8));
         s_modbus->read_state = READ_START;
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_flush(0);
+        mgos_softuart_flush(s_modbus->uart_no);
         #else
         mgos_uart_flush(s_modbus->uart_no);
         #endif
         mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_write(0, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+        mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
         #else
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
         #endif
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_set_dispatcher(0, uart_cb, &s_req_timer);
+        mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #else
         mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #endif
@@ -529,7 +529,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
 
     #if CS_PLATFORM == CS_P_ESP8266
     struct mgos_softuart_config sucfg;
-    mgos_softuart_config_set_defaults(0, &sucfg);
+    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
     sucfg.baud_rate = ucfg.baud_rate;
     sucfg.parity = ucfg.parity;
     sucfg.stop_bits = ucfg.stop_bits;
@@ -537,18 +537,12 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
-    if (!mgos_uart_configure(cfg->uart_no, &ucfg)) {
-        LOG(LL_ERROR, ("Failed to configure UART%d", cfg->uart_no));
-        return false;
-    }
-
-    if (!mgos_softuart_configure(0, &sucfg)) {
+    if (!mgos_softuart_configure(cfg->uart_no, &sucfg)) {
         LOG(LL_ERROR, ("Failed to configure SOFTUART%d", 0));
         return false;
     }
 
-    mgos_softuart_set_rx_enabled(0, true);
-    mgos_uart_set_rx_enabled(cfg->uart_no, false);
+    mgos_softuart_set_rx_enabled(cfg->uart_no, true);
     #else
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
         ucfg.dev.rx_gpio = mgos_sys_config_get_modbus_uart_rx_pin();
