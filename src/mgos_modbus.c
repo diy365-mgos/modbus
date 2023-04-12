@@ -517,8 +517,14 @@ bool mb_mask_write_register(uint8_t slave_id, uint16_t address, uint16_t and_mas
 }
 
 bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
+    #if CS_PLATFORM == CS_P_ESP8266
+    struct mgos_softuart_config sucfg;
+    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
+    #else
     struct mgos_uart_config ucfg;
     mgos_uart_config_set_defaults(cfg->uart_no, &ucfg);
+    #endif
+
     ucfg.baud_rate = mgos_sys_config_get_modbus_baudrate();
     if (mgos_sys_config_get_modbus_parity() >= 0 && mgos_sys_config_get_modbus_parity() < 3) {
         ucfg.parity = mgos_sys_config_get_modbus_parity();
@@ -527,14 +533,8 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
         ucfg.stop_bits = mgos_sys_config_get_modbus_stop_bits();
     }
 
-    #if CS_PLATFORM == CS_P_ESP8266
-    struct mgos_softuart_config sucfg;
-    mgos_softuart_config_set_defaults(cfg->uart_no, &sucfg);
-    sucfg.baud_rate = ucfg.baud_rate;
-    sucfg.parity = ucfg.parity;
-    sucfg.stop_bits = ucfg.stop_bits;
-
-    LOG(LL_DEBUG, ("MODBUS UART%d, Baudrate %d, Parity %d, Stop bits %d",
+    #if CS_PLATFORM == CS_P_ESP826
+    LOG(LL_INFO, ("MODBUS SOFTUART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
     if (!mgos_softuart_configure(cfg->uart_no, &sucfg)) {
@@ -557,7 +557,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     ucfg.dev.tx_en_gpio_val = mgos_sys_config_get_modbus_tx_en_gpio_val();
 
     char b1[8], b2[8], b3[8];
-    LOG(LL_DEBUG, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
+    LOG(LL_INFO, ("MODBUS UART%d (RX:%s TX:%s TX_EN:%s), Baudrate %d, Parity %d, Stop bits %d, Half Duplex %d, tx_en Value %d",
                    cfg->uart_no, mgos_gpio_str(ucfg.dev.rx_gpio, b1),
                    mgos_gpio_str(ucfg.dev.tx_gpio, b2),
                    mgos_gpio_str(ucfg.dev.tx_en_gpio, b3), ucfg.baud_rate,
