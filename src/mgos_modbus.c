@@ -245,26 +245,25 @@ static void update_modbus_read_state(struct mbuf* buffer) {
 static void uart_cb(int uart_no, void* param) {
     (void)param;
     assert(uart_no == s_modbus->uart_no);
-    struct mbuf* buffer = &s_modbus->receive_buffer;
 
     #if CS_PLATFORM == CS_P_ESP8266
     size_t rx_av = mgos_softuart_read_avail(uart_no);
     #else
     size_t rx_av = mgos_uart_read_avail(uart_no);
     #endif
-    if (rx_av == 0) {
-        return;
+
+    if (rx_av > 0) {
+        struct mbuf* buffer = &s_modbus->receive_buffer;
+        #if CS_PLATFORM == CS_P_ESP8266
+        mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
+        #else
+        mgos_uart_read_mbuf(uart_no, buffer, rx_av);
+        #endif
+        LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
+                            s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
+
+        update_modbus_read_state(buffer);
     }
-
-    #if CS_PLATFORM == CS_P_ESP8266
-    mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
-    #else
-    mgos_uart_read_mbuf(uart_no, buffer, rx_av);
-    #endif
-    LOG(LL_VERBOSE_DEBUG, ("SlaveID: %.2x, Function: %.2x - uart_cb - Receive Buffer: %d, Read Available: %d",
-                           s_modbus->slave_id_u8, s_modbus->func_code_u8, s_modbus->receive_buffer.len, rx_av));
-
-    update_modbus_read_state(buffer);
 }
 
 static bool init_modbus(uint8_t slave_id, uint8_t func_code, uint8_t total_resp_bytes, mb_response_callback cb, void* cb_arg) {
@@ -357,13 +356,10 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         #if CS_PLATFORM == CS_P_ESP8266
         mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+        //mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #else
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
-        #endif
-        #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
-        #else
-        mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
+        //mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #endif
         return true;
     }
@@ -534,6 +530,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     }
 
     #if CS_PLATFORM == CS_P_ESP8266
+
     LOG(LL_INFO, ("MODBUS SOFTUART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
@@ -543,7 +540,10 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     }
 
     mgos_softuart_set_rx_enabled(cfg->uart_no, true);
+    mgos_softuart_set_dispatcher(cfg->uart_no, uart_cb, NULL);
+
     #else
+
     if (mgos_sys_config_get_modbus_uart_rx_pin() >= 0) {
         ucfg.dev.rx_gpio = mgos_sys_config_get_modbus_uart_rx_pin();
     }
@@ -569,6 +569,8 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     }
 
     mgos_uart_set_rx_enabled(cfg->uart_no, true);
+    mgos_uart_set_dispatcher(cfg->uart_no, uart_cb, NULL);
+
     #endif
 
     s_modbus = (struct mgos_modbus*)calloc(1, sizeof(*s_modbus));
