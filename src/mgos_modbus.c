@@ -43,6 +43,11 @@ struct mgos_modbus {
     mb_response_callback cb;
     void* cb_arg;
     int uart_no;
+    #if CS_PLATFORM == CS_P_ESP8266
+    struct mgos_softuart_config uart_cfg;
+    #else
+    struct mgos_uart_config uart_cfg;
+    #endif
     uint8_t slave_id_u8;
     uint16_t read_address_u16;
     uint16_t read_qty_u16;
@@ -352,14 +357,15 @@ static bool start_transaction() {
         #else
         mgos_uart_flush(s_modbus->uart_no);
         #endif
-        mgos_msleep(30);  //TODO delay for 3.5 Characters length according to baud rate
+
+        // Delay for 3.5 Characters length according to baud rate
+        mgos_usleep((1000000 / s_modbus->uart_cfg.baud_rate) * 3.5);  
+
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         #if CS_PLATFORM == CS_P_ESP8266
         mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
-        //mgos_softuart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #else
         mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
-        //mgos_uart_set_dispatcher(s_modbus->uart_no, uart_cb, &s_req_timer);
         #endif
         return true;
     }
@@ -580,6 +586,7 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     mbuf_init(&s_modbus->receive_buffer, 300);
     s_modbus->read_state = DISABLED;
     s_modbus->uart_no = cfg->uart_no;
+    memcpy(&s_modbus->uart_cfg, &ucfg, sizeof(ucfg));
 
     return true;
 }
