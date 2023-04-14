@@ -373,6 +373,8 @@ static bool start_transaction() {
                 return true;
 
             mgos_clear_timer(s_req_timer);
+            LOG(LL_ERROR, ("Something went wrong transmitting data: %d of %d bytes have been sent",
+               wrb, s_modbus->transmit_buffer.len));
         }
     }
     return false;
