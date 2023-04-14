@@ -364,11 +364,15 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         if (s_req_timer != MGOS_INVALID_TIMER_ID) {
             #if CS_PLATFORM == CS_P_ESP8266
-            mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+            size_t wrb = mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
             #else
-            mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+            size_t wrb = mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
             #endif
-            return true;
+            
+            if (wrb == s_modbus->transmit_buffer.len)
+                return true;
+
+            mgos_clear_timer(s_req_timer);
         }
     }
     return false;
