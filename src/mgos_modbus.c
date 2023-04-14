@@ -669,14 +669,14 @@ int get_buffer_offset(uint16_t read_start_address, uint8_t byte_count, uint16_t 
     int read_qty = byte_count / 2;
     int max_read_address = read_start_address + read_qty - 1;
     if (required_address < read_start_address || required_address >= max_read_address) {
-        LOG(LL_INFO, ("Invalid address: %d, address out of range, start address - %d, byte count - %d",
-                      required_address, read_start_address, byte_count));
+        LOG(LL_ERROR, ("Invalid address: %d, address out of range, start address - %d, byte count - %d",
+                       required_address, read_start_address, byte_count));
         return -1;
     }
     int diff = required_address - read_start_address;
     if (diff % 2 != 0) {
-        LOG(LL_INFO, ("Invalid address: %d, address value not consistent, start address - %d, byte count - %d",
-                      required_address, read_start_address, byte_count));
+        LOG(LL_ERROR, ("Invalid address: %d, address value not consistent, start address - %d, byte count - %d",
+                       required_address, read_start_address, byte_count));
         return -1;
     }
     return diff * 2 + 3;
@@ -687,7 +687,7 @@ char* get_attribute_value(struct mbuf* mb_reponse, uint16_t read_start_address, 
     int required_address = -1;
     enum MB_VALUE_TYPE type = parse_address_info(attr_info, &required_address);
     if (required_address < 0) {
-        LOG(LL_INFO, ("Cannot find address in modbus response"));
+        LOG(LL_ERROR, ("Cannot find address in modbus response"));
         return NULL;
     }
 
@@ -745,7 +745,7 @@ char* set_resp_json(struct mbuf* json_buf, char* offset, const char* key,
 }
 
 char* mb_map_register_response(const char* json_map, struct mbuf* mb_resp, struct mb_request_info* info) {
-    LOG(LL_INFO, ("Map modbus response to json"));
+    LOG(LL_DEBUG, ("Map modbus response to json"));
     void* h = NULL;
     char* offset = NULL;
     struct json_token attr_name, attr_info;
@@ -799,7 +799,7 @@ char* mb_resp_to_str(struct mbuf response) {
 void rpc_mb_resp_cb(uint8_t status, struct mb_request_info info, struct mbuf response, void* param) {
     struct rpc_info* rpc_i = (struct rpc_info*)param;
     char* resp = NULL;
-    LOG(LL_INFO, ("Modbus.Read rpc response, status: %#02x", status));
+    LOG(LL_DEBUG, ("Modbus.Read rpc response, status: %#02x", status));
     if (status == RESP_SUCCESS) {
         if (rpc_i->map != NULL) {
             resp = mb_map_register_response(rpc_i->map, &response, &info);
@@ -826,7 +826,7 @@ void rpc_mb_resp_cb(uint8_t status, struct mb_request_info info, struct mbuf res
 
 static void rpc_modbus_read_handler(struct mg_rpc_request_info* ri, void* cb_arg,
                                     struct mg_rpc_frame_info* fi, struct mg_str args) {
-    LOG(LL_INFO, ("Modbus.Read rpc called, payload: %.*s", args.len, args.p));
+    LOG(LL_DEBUG, ("Modbus.Read rpc called, payload: %.*s", args.len, args.p));
     int func = -1, id = -1, start = -1, qty = -1;
     char *map_file = NULL, *map = NULL;
     json_scanf(args.p, args.len, ri->args_fmt, &func, &id, &start, &qty, &map_file, &map);
@@ -875,8 +875,6 @@ out:
 }
 
 bool mgos_modbus_init(void) {
-    LOG(LL_DEBUG, ("Initializing modbus"));
-
     if (!mgos_sys_config_get_modbus_enable()) {
         LOG(LL_INFO, ("Modbus is disabled"));
         return true;
