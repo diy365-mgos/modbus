@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  * 
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ * _soft_uart
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,7 @@
 #include "crc16.h"
 #include "mgos_rpc.h"
 #if CS_PLATFORM == CS_P_ESP8266
-#include "mgos_softuart.h"
+#include "mgos_soft_uart.h"
 #endif
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
@@ -44,7 +44,7 @@ struct mgos_modbus {
     void* cb_arg;
     int uart_no;
     #if CS_PLATFORM == CS_P_ESP8266
-    struct mgos_softuart_config uart_cfg;
+    struct mgos_soft_uart_config uart_cfg;
     #else
     struct mgos_uart_config uart_cfg;
     #endif
@@ -252,7 +252,7 @@ static void uart_cb(int uart_no, void* param) {
     assert(uart_no == s_modbus->uart_no);
 
     #if CS_PLATFORM == CS_P_ESP8266
-    size_t rx_av = mgos_softuart_read_avail(uart_no);
+    size_t rx_av = mgos_soft_uart_read_avail(uart_no);
     #else
     size_t rx_av = mgos_uart_read_avail(uart_no);
     #endif
@@ -260,7 +260,7 @@ static void uart_cb(int uart_no, void* param) {
     if (rx_av > 0) {
         struct mbuf* buffer = &s_modbus->receive_buffer;
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_read_mbuf(uart_no, buffer, rx_av);
+        mgos_soft_uart_read_mbuf(uart_no, buffer, rx_av);
         #else
         mgos_uart_read_mbuf(uart_no, buffer, rx_av);
         #endif
@@ -353,7 +353,7 @@ static bool start_transaction() {
         LOG(LL_DEBUG, ("SlaveID: %.2x, Function: %.2x - Modbus Transaction Start", s_modbus->slave_id_u8, s_modbus->func_code_u8));
         s_modbus->read_state = READ_START;
         #if CS_PLATFORM == CS_P_ESP8266
-        mgos_softuart_flush(s_modbus->uart_no);
+        mgos_soft_uart_flush(s_modbus->uart_no);
         #else
         mgos_uart_flush(s_modbus->uart_no);
         #endif
@@ -364,7 +364,7 @@ static bool start_transaction() {
         s_req_timer = mgos_set_timer(mgos_sys_config_get_modbus_timeout(), 0, req_timeout_cb, NULL);
         if (s_req_timer != MGOS_INVALID_TIMER_ID) {
             #if CS_PLATFORM == CS_P_ESP8266
-            size_t wrb = mgos_softuart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
+            size_t wrb = mgos_soft_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
             #else
             size_t wrb = mgos_uart_write(s_modbus->uart_no, s_modbus->transmit_buffer.buf, s_modbus->transmit_buffer.len);
             #endif
@@ -528,8 +528,8 @@ bool mb_mask_write_register(uint8_t slave_id, uint16_t address, uint16_t and_mas
 
 bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
     #if CS_PLATFORM == CS_P_ESP8266
-    struct mgos_softuart_config ucfg;
-    mgos_softuart_config_set_defaults(cfg->uart_no, &ucfg);
+    struct mgos_soft_uart_config ucfg;
+    mgos_soft_uart_config_set_defaults(cfg->uart_no, &ucfg);
     #else
     struct mgos_uart_config ucfg;
     mgos_uart_config_set_defaults(cfg->uart_no, &ucfg);
@@ -545,16 +545,16 @@ bool mg_modbus_create(const struct mgos_config_modbus* cfg) {
 
     #if CS_PLATFORM == CS_P_ESP8266
 
-    LOG(LL_INFO, ("MODBUS SOFTUART%d, Baudrate %d, Parity %d, Stop bits %d",
+    LOG(LL_INFO, ("MODBUS SOFT-UART%d, Baudrate %d, Parity %d, Stop bits %d",
                    cfg->uart_no, ucfg.baud_rate, ucfg.parity, ucfg.stop_bits));
 
-    if (!mgos_softuart_configure(cfg->uart_no, &ucfg)) {
-        LOG(LL_ERROR, ("Failed to configure SOFTUART%d", 0));
+    if (!mgos_soft_uart_configure(cfg->uart_no, &ucfg)) {
+        LOG(LL_ERROR, ("Failed to configure SOFT-UART%d", 0));
         return false;
     }
 
-    mgos_softuart_set_rx_enabled(cfg->uart_no, true);
-    mgos_softuart_set_dispatcher(cfg->uart_no, uart_cb, NULL);
+    mgos_soft_uart_set_rx_enabled(cfg->uart_no, true);
+    mgos_soft_uart_set_dispatcher(cfg->uart_no, uart_cb, NULL);
 
     #else
 
