@@ -29,7 +29,7 @@ conds:
   - when: mos.platform == "esp8266"
     apply:
       libs:
-        - location: https://github.com/diy365-mgos/softuart
+        - location: https://github.com/mongoose-os-libs/soft-uart
       config_schema:
         - ["modbus.uart_no", 0]
 
